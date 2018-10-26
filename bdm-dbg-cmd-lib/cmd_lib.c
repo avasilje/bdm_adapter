@@ -98,7 +98,7 @@ int update_cmd_int(WCHAR *pc_cmd_arg, T_UI_CMD_FIELD *pt_fields, int n_update){
 
                         while(pc_value){
                             if (n_update){
-                                wcsncpy_s(pc_dst, n_dst_size+1, pc_value, _TRUNCATE);
+                                wcsncpy_s(pc_dst, n_dst_size, pc_value, _TRUNCATE);
                             }
                             pc_dst += wcslen(pc_value);
                             n_dst_size -= wcslen(pc_value);
@@ -108,7 +108,7 @@ int update_cmd_int(WCHAR *pc_cmd_arg, T_UI_CMD_FIELD *pt_fields, int n_update){
                             // check is another token started
                             if (pc_value && pc_value[0] == L'-') 
                             {
-                                n_skip_tokenization_fl = true;
+                                n_skip_tokenization_fl = TRUE;
                                 pc_cmd = pc_value;
                                 break;
                             }
@@ -143,7 +143,7 @@ int update_cmd_int(WCHAR *pc_cmd_arg, T_UI_CMD_FIELD *pt_fields, int n_update){
                             // check is another token started
                             if (pc_value && pc_value[0] == L'-') 
                             {
-                                n_skip_tokenization_fl = true;
+                                n_skip_tokenization_fl = TRUE;
                                 pc_cmd = pc_value;
                                 break;
                             }
@@ -175,7 +175,7 @@ int update_cmd_int(WCHAR *pc_cmd_arg, T_UI_CMD_FIELD *pt_fields, int n_update){
                             // check is another token started
                             if (pc_value && pc_value[0] == L'-') 
                             {
-                                n_skip_tokenization_fl = true;
+                                n_skip_tokenization_fl = TRUE;
                                 pc_cmd = pc_value;
                                 break;
                             }
@@ -205,7 +205,7 @@ int update_cmd_int(WCHAR *pc_cmd_arg, T_UI_CMD_FIELD *pt_fields, int n_update){
         if (!n_skip_tokenization_fl)
             pc_cmd = wcstok(NULL, L" ");
 
-        n_skip_tokenization_fl = false;
+        n_skip_tokenization_fl = FALSE;
 
     }// End of Command parse while
 

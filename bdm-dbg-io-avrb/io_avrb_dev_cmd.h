@@ -9,6 +9,8 @@ void cmd_io_bdm_reset(void);
 void cmd_io_bdm_read(void);
 void cmd_io_bdm_write8(void);
 void cmd_io_bdm_write16(void);
+void cmd_io_bdm_fread(void);
+void cmd_io_bdm_fwrite(void);
 void cmd_io_loopback(void);
 
 #endif

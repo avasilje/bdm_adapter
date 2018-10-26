@@ -1,0 +1,18 @@
+{
+  "mem_blocks": [
+    {
+      "name": "stat0",
+      "addr": "0x12345",
+      "size": "0x123456",
+      "width": 2,
+      "format": "d"
+    },
+    {
+      "name": "stat1",
+      "addr": "0x12345",
+      "size": "0x123456",
+      "width": 1,
+      "format": "X"
+    }
+  ]
+}

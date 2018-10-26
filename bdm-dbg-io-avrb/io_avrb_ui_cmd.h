@@ -51,6 +51,28 @@ extern struct s_cmd_bdm_write gt_cmd_bdm_write16;
 
 //----------------------------------------------------------
 
+#define JFILENAME_LEN 128
+
+struct s_cmd_fread {
+  T_UI_CMD_FIELD   fin;
+  T_UI_CMD_FIELD   fout;
+  T_UI_CMD_FIELD   eomsg;
+};
+
+extern struct s_cmd_fread gt_cmd_bdm_fread;
+
+//----------------------------------------------------------
+
+struct s_cmd_fwrite {
+  T_UI_CMD_FIELD   fin;
+  T_UI_CMD_FIELD   eomsg;
+};
+
+extern struct s_cmd_fwrite gt_cmd_fwrite;
+
+
+//----------------------------------------------------------
+
 #define LOOPBACK_STRING_DATA_LEN 128
 
 struct s_cmd_loopback{

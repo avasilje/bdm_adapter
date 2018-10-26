@@ -44,14 +44,15 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\ftdi_d2xx\CDM v2.10.00 WHQL Certified;..\bdm-dbg-cmd-proc;..\bdm-dbg-io;..\bdm-dbg-cmd-lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..;..\json-c\build;..\ftdi_d2xx\CDM v2.10.00 WHQL Certified;..\bdm-dbg-cmd-proc;..\bdm-dbg-io;..\bdm-dbg-cmd-lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BrowseInformation>true</BrowseInformation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions); DEV_FT_TYPE_FIFO</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(TargetDir);..\ftdi_d2xx\CDM v2.10.00 WHQL Certified\i386</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ftd2xx.lib;bdm-dbg-cmd-lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\json-c\build\Debug;$(TargetDir);..\ftdi_d2xx\CDM v2.10.00 WHQL Certified\i386</AdditionalLibraryDirectories>
+      <AdditionalDependencies>json-c.lib;ftd2xx.lib;bdm-dbg-cmd-lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Bscmake>
       <PreserveSbr>true</PreserveSbr>
@@ -74,10 +75,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\bdm-dbg-io\dbg-io.cpp" />
-    <ClCompile Include="io_avrb_ui_cmd.cpp" />
-    <ClCompile Include="io_avrb_dev_cmd.cpp" />
-    <ClCompile Include="io_avrb_dev_resp.cpp" />
+    <ClCompile Include="..\bdm-dbg-io\dbg-io.c" />
+    <ClCompile Include="io_avrb_ui_cmd.c" />
+    <ClCompile Include="io_avrb_dev_cmd.c" />
+    <ClCompile Include="io_avrb_dev_resp.c" />
+    <ClCompile Include="mem_file.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\bdm-dbg-io\dbg-io.h" />
@@ -85,6 +87,7 @@
     <ClInclude Include="io_avrb_dev_cmd.h" />
     <ClInclude Include="io_avrb_dev_resp.h" />
     <ClInclude Include="io_avrb_ui_cmd.h" />
+    <ClInclude Include="memf.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

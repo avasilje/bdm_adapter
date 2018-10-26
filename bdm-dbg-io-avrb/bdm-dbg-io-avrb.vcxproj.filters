@@ -12,19 +12,25 @@
     <Filter Include="dbg-io">
       <UniqueIdentifier>{a52eca68-e834-4198-808c-314d28b0560f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\utils">
+      <UniqueIdentifier>{7ef8f1c4-5491-4fa5-bb3f-4d49f7e5e0c2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="io_avrb_ui_cmd.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="mem_file.c">
+      <Filter>Source Files\utils</Filter>
     </ClCompile>
-    <ClCompile Include="io_avrb_dev_cmd.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="io_avrb_dev_resp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\bdm-dbg-io\dbg-io.cpp">
+    <ClCompile Include="..\bdm-dbg-io\dbg-io.c">
       <Filter>dbg-io</Filter>
+    </ClCompile>
+    <ClCompile Include="io_avrb_dev_cmd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="io_avrb_dev_resp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="io_avrb_ui_cmd.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -42,6 +48,9 @@
     </ClInclude>
     <ClInclude Include="..\bdm-dbg-io\dbg-io_int.h">
       <Filter>dbg-io</Filter>
+    </ClInclude>
+    <ClInclude Include="memf.h">
+      <Filter>Source Files\utils</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

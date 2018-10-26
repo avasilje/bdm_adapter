@@ -23,6 +23,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "json-c/json.h"
+
 #include "FTD2XX.H"
 #include "cmd_lib.h"
 #include "dbg-io.h"
@@ -42,6 +44,19 @@ HANDLE gha_events[HANDLES_NUM];
 
 HANDLE gh_dump_file;
 HANDLE gh_meas_log_file;
+
+#define SIMULATED_PAYLOAD_LEN 10
+int g_uart_simulated = 0;
+BYTE gdw_uart_simulated_bytes = (SIMULATED_PAYLOAD_LEN + 1 + 4 + 4) + 2;
+
+BYTE gba_uart_simulated_buff[1024] = {
+    0xD2,                         //  DBG_BUFF_MARK_RSP
+    (SIMULATED_PAYLOAD_LEN + 1 + 4 + 4),        
+    0x22,                                        // Memory read
+    0x20, 0x00, 0x00, 10,                        // DWORD addr;
+    SIMULATED_PAYLOAD_LEN, 0x00, 0x00, 0x00,     // DWORD len
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+};
 
 // TODO: move to shared area
 #pragma pack(push, 1)
@@ -77,7 +92,7 @@ T_DEV_RX_STREAM gt_stream_crsp = {
     CMD_RESP_HEADER_SIZE,  // Command Response header
     0,
     {0xCC},
-    dev_rx_stream_handler_crsp
+    .pf_handler = dev_rx_stream_handler_crsp
 }; // Command Response
 
 HANDLE gh_accdbg_file = INVALID_HANDLE_VALUE;
@@ -1336,7 +1351,7 @@ void dev_rx_stream_handler_crsp (void)
     return;
 }
 
-void dev_tx (DWORD dw_byte_to_write, BYTE *pc_cmd, const WCHAR *pc_cmd_name)
+void dev_tx (DWORD dw_bytes_to_write, BYTE *pc_cmd, const WCHAR *pc_cmd_name)
 {
 
     int n_rc, n_gle;
@@ -1348,7 +1363,7 @@ void dev_tx (DWORD dw_byte_to_write, BYTE *pc_cmd, const WCHAR *pc_cmd_name)
         DWORD i;
         wprintf(L"\n--------------------------------- %s : %0X", pc_cmd_name, pc_cmd[0]);
 
-        for (i = 1; i <  dw_byte_to_write; i++)
+        for (i = 1; i <  dw_bytes_to_write; i++)
         {
             wprintf(L"-%02X", pc_cmd[i]);
         }
@@ -1358,7 +1373,7 @@ void dev_tx (DWORD dw_byte_to_write, BYTE *pc_cmd, const WCHAR *pc_cmd_name)
     n_rc = FT_W32_WriteFile(
         gh_dev,
         pc_cmd, 
-        dw_byte_to_write,
+        dw_bytes_to_write,
         &dw_bytes_written, 
         &gt_dev_tx_overlapped);
 
@@ -1373,7 +1388,7 @@ void dev_tx (DWORD dw_byte_to_write, BYTE *pc_cmd, const WCHAR *pc_cmd_name)
     }
 
     n_rc = FT_W32_GetOverlappedResult(gh_dev, &gt_dev_tx_overlapped, &dw_bytes_written, TRUE);
-    if (!n_rc || (dw_byte_to_write != dw_bytes_written))
+    if (!n_rc || (dw_bytes_to_write != dw_bytes_written))
     {
         n_rc = FALSE;
         goto cleanup_dev_tx;
@@ -1487,11 +1502,26 @@ int main_loop_wait (void)
         //    }
         //}
 
+        if (g_uart_simulated) 
+        {
+            gdw_dev_bytes_rcv = DEV_RX_STREAM_HDR_SIZE;
+            gt_dev_rx.uca_dev_rx_buff[0] = 0;
+            gt_dev_rx.uca_dev_rx_buff[0] |= DBG_BUFF_IDX_CRSP << 6;
+            gt_dev_rx.uca_dev_rx_buff[0] |= gdw_uart_simulated_bytes & ((1 << 6) - 1);
+
+            gt_stream_crsp.dw_wr_idx = 0;
+            !!! debug this !!!
+            dev_rx_proc(gdw_dev_bytes_rcv);
+
+            gdw_dev_bytes_rcv = gdw_uart_simulated_bytes;
+            memcpy(gt_dev_rx.uca_dev_rx_buff, gba_uart_simulated_buff, gdw_dev_bytes_rcv);
+            dev_rx_proc(gdw_dev_bytes_rcv);
+        }
         // Nothing to do
         return TRUE;
 
     }
-
+    
     else if (n_rc == WAIT_OBJECT_0 + HANDLE_IO_PIPE_CONN)
     {
         n_rc = io_pipe_check();

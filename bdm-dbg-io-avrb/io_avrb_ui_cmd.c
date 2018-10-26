@@ -18,29 +18,29 @@
 #include "io_avrb_dev_cmd.h"
 
 //---------------------------------------------------------------------------
-s_cmd_sign gt_cmd_sign = {
+struct s_cmd_sign gt_cmd_sign = {
     {NULL, CFT_LAST, 0, 0}
 };
 
 //---------------------------------------------------------------------------
-s_cmd_bdm_break gt_cmd_bdm_break = {
+struct s_cmd_bdm_break gt_cmd_bdm_break = {
     {L"ADDR"  ,  CFT_NUM,      0,           0},
     {NULL, CFT_LAST, 0, 0}
 };
 
 
 //---------------------------------------------------------------------------
-s_cmd_bdm_go gt_cmd_bdm_go = {
+struct s_cmd_bdm_go gt_cmd_bdm_go = {
     {NULL, CFT_LAST, 0, 0}
 };
 
 //---------------------------------------------------------------------------
-s_cmd_bdm_reset gt_cmd_bdm_reset = {
+struct s_cmd_bdm_reset gt_cmd_bdm_reset = {
     {NULL, CFT_LAST, 0, 0}
 };
 
 //---------------------------------------------------------------------------
-s_cmd_bdm_read gt_cmd_bdm_read = {
+struct s_cmd_bdm_read gt_cmd_bdm_read = {
     {L"ADDR"  ,  CFT_NUM,      0,           0},
     {L"LEN"   ,  CFT_NUM,      0,           0},
     {NULL, CFT_LAST, 0, 0}
@@ -49,18 +49,18 @@ s_cmd_bdm_read gt_cmd_bdm_read = {
 //---------------------------------------------------------------------------
 
 BYTE raw_buff[BDM_WRITE_DATA_LEN] = {0};
-T_RAW_BUF t_bdm_write_buff {
+T_RAW_BUF t_bdm_write_buff = {
     0,
     &raw_buff[0]
 };
 
-s_cmd_bdm_write gt_cmd_bdm_write8 = {
+struct s_cmd_bdm_write gt_cmd_bdm_write8 = {
     {L"ADDR"  ,  CFT_NUM,      0,           0},
     {L"BUFF"  ,  CFT_RAW8,     BDM_WRITE_DATA_LEN,  (DWORD)&t_bdm_write_buff},
     {NULL, CFT_LAST, 0, 0}
 };
 
-s_cmd_bdm_write gt_cmd_bdm_write16 = {
+struct s_cmd_bdm_write gt_cmd_bdm_write16 = {
     {L"ADDR"  ,  CFT_NUM,      0,           0},
     {L"BUFF"  ,  CFT_RAW16,    BDM_WRITE_DATA_LEN,  (DWORD)&t_bdm_write_buff},
     {NULL, CFT_LAST, 0, 0}
@@ -68,8 +68,24 @@ s_cmd_bdm_write gt_cmd_bdm_write16 = {
 
 //---------------------------------------------------------------------------
 
+WCHAR ca_fin_str[JFILENAME_LEN] = L"rd.json";
+WCHAR ca_fout_str[JFILENAME_LEN] = L"out.json";
+
+struct s_cmd_fread gt_cmd_bdm_fread = {
+  { L"IN"    ,  CFT_TXT,      JFILENAME_LEN,  (DWORD)ca_fin_str },
+  { L"OUT"   ,  CFT_TXT,      JFILENAME_LEN,  (DWORD)ca_fout_str },
+  { NULL, CFT_LAST, 0, 0 }
+};
+
+struct s_cmd_fwrite gt_cmd_bdm_fwrite = {
+  { L"IN"    ,  CFT_TXT,      JFILENAME_LEN,  (DWORD)ca_fin_str },
+  { NULL, CFT_LAST, 0, 0 }
+};
+
+//---------------------------------------------------------------------------
+
 WCHAR ca_lbs_str[LOOPBACK_STRING_DATA_LEN] = L"--LOOPBACK_TEST_STRING--";
-s_cmd_loopback gt_cmd_loopback = {
+struct s_cmd_loopback gt_cmd_loopback = {
     {L"STR"    ,  CFT_TXT,      LOOPBACK_STRING_DATA_LEN,  (DWORD)ca_lbs_str},
     {NULL, CFT_LAST, 0, 0}
 };
@@ -101,6 +117,8 @@ T_UI_CMD gta_io_ui_cmd[] = {
         { L"RD",       (T_UI_CMD_FIELD*)&gt_cmd_bdm_read,    (void*)cmd_io_bdm_read  },
         { L"WR8",      (T_UI_CMD_FIELD*)&gt_cmd_bdm_write8,  (void*)cmd_io_bdm_write8  },
         { L"WR16",     (T_UI_CMD_FIELD*)&gt_cmd_bdm_write16, (void*)cmd_io_bdm_write16 },
+        { L"FWR",      (T_UI_CMD_FIELD*)&gt_cmd_bdm_fwrite,  (void*)cmd_io_bdm_fwrite },
+        { L"FRD",      (T_UI_CMD_FIELD*)&gt_cmd_bdm_fread,   (void*)cmd_io_bdm_fread },
         { L"LOOPBACK", (T_UI_CMD_FIELD*)&gt_cmd_loopback,  (void*)cmd_io_loopback  },
         { 0, 0 }
 };
