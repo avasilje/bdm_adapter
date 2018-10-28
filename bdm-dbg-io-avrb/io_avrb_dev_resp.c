@@ -27,11 +27,15 @@
 
 T_MEM_FILE *memf_rsp;
 
-void memf_entry_printf (T_MEM_ENTRY *pt_mem_entry) 
+void memf_entry_printf (T_MEM_ENTRY *pt_mem_entry, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len) 
 {
-    wprintf(L"%hs (%d)", 
+    int wchars;
+    wchars = swprintf(pc_cmd_resp_out, t_max_resp_len, L"%hs (%d)", 
         pt_mem_entry->name,
         pt_mem_entry->size);
+    
+    pc_cmd_resp_out += wchars;
+    t_max_resp_len -= wchars;
 
     size_t idx = 0;
     int col_cnt = 0;
@@ -52,22 +56,25 @@ void memf_entry_printf (T_MEM_ENTRY *pt_mem_entry)
 
     } else if (0 == _stricmp(pt_mem_entry->format, "d")) {
         switch (pt_mem_entry->width) {
-            case 1: wprint_format = L" %-3d"; break;
-            case 2: wprint_format = L" %-5d"; break;
-            case 4: wprint_format = L" %d"; break;
+            case 1: wprint_format = L" %-4d"; break;
+            case 2: wprint_format = L" %-6d"; break;
+            case 4: wprint_format = L" %-12d"; break;
         }
     }
 
     while(idx < pt_mem_entry->size) {
         DWORD n;
         if (col_cnt == 0) {
-            wprintf(L"\n  %08X: ", curr_addr);
+            wchars = swprintf(pc_cmd_resp_out, t_max_resp_len, L"\n  %08X: ", curr_addr);
+            pc_cmd_resp_out += wchars;
+            t_max_resp_len -= wchars;
+
         }
 
         switch (pt_mem_entry->width) {
-            case 1: n =  (BYTE)&pt_mem_entry->data[idx]; break;
-            case 2: n =  (WORD)&pt_mem_entry->data[idx]; break;
-            case 4: n = (DWORD)&pt_mem_entry->data[idx]; break;
+            case 1: n = *(BYTE*)&pt_mem_entry->data[idx]; break;
+            case 2: n = Swap16(*(WORD*)&pt_mem_entry->data[idx]); break;
+            case 4: n = Swap32(*(DWORD*)&pt_mem_entry->data[idx]); break;
         }
         idx += pt_mem_entry->width;
         curr_addr += pt_mem_entry->width;
@@ -75,14 +82,21 @@ void memf_entry_printf (T_MEM_ENTRY *pt_mem_entry)
         col_cnt ++;
         if (col_cnt == cols) col_cnt = 0;
          
-        wprintf(wprint_format, n);
+        wchars = swprintf(pc_cmd_resp_out, t_max_resp_len, wprint_format, n);
+        pc_cmd_resp_out += wchars;
+        t_max_resp_len -= wchars;
     }
-    wprintf(L"\n");
+    wchars = swprintf(pc_cmd_resp_out, t_max_resp_len, L"\n");
+    pc_cmd_resp_out += wchars;
+    t_max_resp_len -= wchars;
+
 
 }
 
 void proceed_mem_read_resp (T_DEV_RSP *pt_dev_rsp, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len)
 {
+    char tmp_str[64];
+
 #pragma pack(push, 1)
     struct t_rsp_read {
         DWORD addr;
@@ -119,13 +133,15 @@ void proceed_mem_read_resp (T_DEV_RSP *pt_dev_rsp, WCHAR *pc_cmd_resp_out, size_
     json_object *j_mem_block = json_object_new_object();
     
     json_object_object_add(j_mem_block, "name"  , json_object_new_string(pt_mem_entry->name));
-    json_object_object_add(j_mem_block, "addr"  , json_object_new_int(pt_mem_entry->addr));  // Q: Get it from response or merge with existing?
+
+    sprintf_s(tmp_str, sizeof(tmp_str), "0x%08X", pt_mem_entry->addr);
+    json_object_object_add(j_mem_block, "addr"  , json_object_new_string(tmp_str));  // Q: Get it from response or merge with existing?
+
     json_object_object_add(j_mem_block, "size"  , json_object_new_int(pt_mem_entry->size));
     json_object_object_add(j_mem_block, "width" , json_object_new_int(pt_mem_entry->width));
     json_object_object_add(j_mem_block, "format", json_object_new_string(pt_mem_entry->format));
     
     json_object *j_data_arr = json_object_new_array();
-    json_object_object_add(j_mem_block, "data", j_data_arr);
 
     size_t idx = 0;
 
@@ -137,18 +153,16 @@ void proceed_mem_read_resp (T_DEV_RSP *pt_dev_rsp, WCHAR *pc_cmd_resp_out, size_
             case 2: j_data_format = "0x%04X"; break;
             case 4: j_data_format = "0x%08X"; break;
         }
-
     }
 
     while(idx < pt_rsp->len) {
-        char tmp_str[64];
         DWORD n;
 
         // Q: byte swap?
         switch (pt_mem_entry->width) {
-            case 1: n = (BYTE) &pt_rsp->data[idx]; break;
-            case 2: n = (WORD) &pt_rsp->data[idx]; break;
-            case 4: n = (DWORD)&pt_rsp->data[idx]; break;
+            case 1: n = *(BYTE*) &pt_rsp->data[idx]; break;
+            case 2: n = Swap16(*(WORD*) &pt_rsp->data[idx]); break;
+            case 4: n = Swap32(*(DWORD*)&pt_rsp->data[idx]); break;
         }
         idx += pt_mem_entry->width;
 
@@ -156,15 +170,17 @@ void proceed_mem_read_resp (T_DEV_RSP *pt_dev_rsp, WCHAR *pc_cmd_resp_out, size_
         json_object_array_add(j_data_arr, json_object_new_string(tmp_str));
     }
   
-    json_object *j_mem_block_arr = json_object_object_get(memf_rsp->obj, "mem_blocks");
-    if (j_mem_block_arr) {
-        json_object_array_add(j_mem_block_arr, j_mem_block);
-    }
+    json_object_object_add(j_mem_block, "data", j_data_arr);
+    json_object_array_add(memf_rsp->mem_blocks, j_mem_block);
 
     pt_mem_entry->data = pt_rsp->data;
-    memf_entry_printf(pt_mem_entry);
+    memf_entry_printf(pt_mem_entry, pc_cmd_resp_out, t_max_resp_len);
 
     pt_mem_entry->is_valid = 0;
+    
+    // Response processed continue with next block
+    // JSON will be dumped to file after all blocks processed
+    cmd_io_bdm_fread_cont();
     
 }
 
@@ -218,7 +234,7 @@ int dev_response_processing (T_DEV_RSP *pt_resp, WCHAR *pc_cmd_resp_out, size_t 
         while (1);
     }
 
-    wprintf(L"UI INIT <-- IO : CMD Resp: %s\n", pc_cmd_resp_out);
+    wprintf(L"UI <-- IO: CMD Resp: %s\n", pc_cmd_resp_out);
 
     return TRUE;
 }

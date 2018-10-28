@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dbg-ui.cpp">
+    <ClCompile Include="dbg-ui.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dbg-ui_inp.cpp">
+    <ClCompile Include="dbg-ui_inp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

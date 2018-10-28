@@ -35,8 +35,9 @@ T_MEM_FILE *memf_cmd;
 
 #pragma pack(push, 1)
 struct t_cmd_hdr {
-    BYTE    uc_cmd;
-    BYTE    uc_len;
+    BYTE    b_mark;
+    BYTE    b_cmd;
+    WORD    s_len;
 };
 #pragma pack(pop)
 
@@ -65,7 +66,7 @@ void cmd_io_sign (void)
     // ----------------------------------------
     // --- Initiate data transfer to MCU
     // ----------------------------------------
-    dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.uc_len;
+    dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.s_len;
 
     dev_tx(dw_bytes_to_write, (BYTE*)&t_cmd, L"SIGN");
     return;
@@ -100,7 +101,7 @@ void cmd_io_bdm_break (void)
         // ----------------------------------------
         // --- Initiate data transfer to MCU
         // ----------------------------------------
-        dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.uc_len;
+        dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.s_len;
 
         dev_tx(dw_bytes_to_write, (BYTE*)&t_cmd, L"BREAK");
         return;
@@ -117,7 +118,7 @@ void cmd_io_bdm_go (void)
     DWORD dw_bytes_to_write;
 
     #pragma pack(push, 1)
-    struct t_cmd_bdm_break {
+    struct t_cmd_bdm_go {
         struct t_cmd_hdr hdr;
     } t_cmd = { {0x17, 0x00} };
     #pragma pack(pop)
@@ -131,7 +132,7 @@ void cmd_io_bdm_go (void)
         // ----------------------------------------
         // --- Initiate data transfer to MCU
         // ----------------------------------------
-        dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.uc_len;
+        dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.s_len;
 
         dev_tx(dw_bytes_to_write, (BYTE*)&t_cmd, L"GO");
         return;
@@ -148,7 +149,7 @@ void cmd_io_bdm_reset (void)
     DWORD dw_bytes_to_write;
 
     #pragma pack(push, 1)
-    struct t_cmd_bdm_break {
+    struct t_cmd_bdm_reset {
         struct t_cmd_hdr hdr;
     } t_cmd = { {0x18, 0x00} };
     #pragma pack(pop)
@@ -162,7 +163,7 @@ void cmd_io_bdm_reset (void)
         // ----------------------------------------
         // --- Initiate data transfer to MCU
         // ----------------------------------------
-        dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.uc_len;
+        dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.s_len;
 
         dev_tx(dw_bytes_to_write, (BYTE*)&t_cmd, L"RESET");
         return;
@@ -189,7 +190,7 @@ void cmd_io_bdm_write_mem (struct s_cmd_bdm_write *pt_write_bdm )
         DWORD addr;
         DWORD len;
         BYTE  ba_buff[BDM_WRITE_DATA_LEN];
-    } t_cmd = { {0x21, 0x00}, 0, 0, {0}};
+    } t_cmd = { {0xD2, 0x21, 0x00}, 0, 0, {0}};
     #pragma pack(pop)
 
     // -----------------------------------------------
@@ -197,14 +198,15 @@ void cmd_io_bdm_write_mem (struct s_cmd_bdm_write *pt_write_bdm )
     // ------------------------------------------------
     n_rc = TRUE;
 
-    t_cmd.hdr.uc_len = pt_write_bdm->data.pt_raw_buff->b_len;        // !!! check length
+    t_cmd.hdr.s_len = sizeof(t_cmd) - sizeof(struct t_cmd_hdr) - sizeof(t_cmd.ba_buff) +
+        pt_write_bdm->data.pt_raw_buff->dw_len;
 
-    memcpy(t_cmd.ba_buff, pt_write_bdm->data.pt_raw_buff->pb_buff, t_cmd.hdr.uc_len);
+    memcpy(t_cmd.ba_buff, pt_write_bdm->data.pt_raw_buff->pb_buff, t_cmd.hdr.s_len);
 
     // ----------------------------------------
     // --- Initiate data transfer to MCU
     // ----------------------------------------
-    dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.uc_len;
+    dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.s_len;
 
     dev_tx(dw_bytes_to_write, (BYTE*)&t_cmd, L"LOOPBACK");
     return;
@@ -222,7 +224,7 @@ void cmd_io_bdm_write16 (void)
 
 void cmd_io_bdm_read_mem(T_MEM_ENTRY *pt_mem_entry)
 {
-    wprintf(L" Read mem: %hs - %08X : %d (%d%hs)", 
+    wprintf(L"    Read mem: %hs - %08X : %d (%d%hs)\n", 
         pt_mem_entry->name,
         pt_mem_entry->addr,
         pt_mem_entry->size,
@@ -237,8 +239,7 @@ void cmd_io_bdm_read_mem(T_MEM_ENTRY *pt_mem_entry)
         struct t_cmd_hdr hdr;
         DWORD addr;
         DWORD len;
-//        BYTE  id;             // ID is used to combine responses in single output stream/file
-    } t_cmd = { { 0x22, 0x00 }, 0, 0 };
+    } t_cmd = { { 0xD2, 0x22, 0x00 }, 0, 0 };
 #pragma pack(pop)
 
     // -----------------------------------------------
@@ -246,7 +247,7 @@ void cmd_io_bdm_read_mem(T_MEM_ENTRY *pt_mem_entry)
     // ------------------------------------------------
     n_rc = TRUE;
 
-    t_cmd.hdr.uc_len = (BYTE)( sizeof(t_cmd) - sizeof(t_cmd.hdr) );
+    t_cmd.hdr.s_len = sizeof(t_cmd) - sizeof(t_cmd.hdr);
 
     t_cmd.addr = pt_mem_entry->addr;
     t_cmd.len = pt_mem_entry->size;
@@ -254,7 +255,7 @@ void cmd_io_bdm_read_mem(T_MEM_ENTRY *pt_mem_entry)
     // ----------------------------------------
     // --- Initiate data transfer to MCU
     // ----------------------------------------
-    dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.uc_len;
+    dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.s_len;
     
     dev_tx(dw_bytes_to_write, (BYTE*)&t_cmd, L"READ MEM");
     return;
@@ -302,7 +303,10 @@ void cmd_io_bdm_fread_cont(void)
 
     if (err) {
         memf_cmd_close(memf_cmd);
-        memf_cmd_close(memf_rsp);
+        memf_cmd = NULL;
+
+        memf_rsp_close(memf_rsp);
+        memf_rsp = NULL;
     }
 
 }
@@ -335,7 +339,7 @@ void cmd_io_loopback(void)
     struct t_cmd_loopback {
         struct t_cmd_hdr hdr;
         WCHAR  ca_lbs[LOOPBACK_STRING_DATA_LEN];
-    } t_cmd = { { 0x41, 0x00 }, { 0 } };
+    } t_cmd = { { 0xD2, 0x41, 0x00 }, { 0 } };
 #pragma pack(pop)
 
     // -----------------------------------------------
@@ -345,13 +349,13 @@ void cmd_io_loopback(void)
 
     size_t t_str_len;
     t_str_len = wcslen(gt_cmd_loopback.lbs.pc_str);
-    t_cmd.hdr.uc_len = (BYTE)(t_str_len * 2 + 2);
+    t_cmd.hdr.s_len = (t_str_len * 2 + 2);
 
-    memcpy(t_cmd.ca_lbs, gt_cmd_loopback.lbs.pc_str, t_cmd.hdr.uc_len);
+    memcpy(t_cmd.ca_lbs, gt_cmd_loopback.lbs.pc_str, t_cmd.hdr.s_len);
     // ----------------------------------------
     // --- Initiate data transfer to MCU
     // ----------------------------------------
-    dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.uc_len;
+    dw_bytes_to_write = sizeof(t_cmd.hdr) + t_cmd.hdr.s_len;
 
     dev_tx(dw_bytes_to_write, (BYTE*)&t_cmd, L"LOOPBACK");
     return;

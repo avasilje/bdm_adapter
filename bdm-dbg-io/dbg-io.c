@@ -30,6 +30,7 @@
 #include "dbg-io.h"
 #include "dbg-io_int.h"
 
+#define DEV_FT_TYPE_UART
 // ------------------------- TO DO: move to FW shared header -------------------
 #define DBG_BUFF_IDX_DBGL    0
 #define DBG_BUFF_IDX_CRSP    1
@@ -70,13 +71,13 @@ typedef struct T_DBGL_HDR_tag {
 
 #pragma pack(push, 1)
 typedef struct T_CRSP_HDR_tag {
-    uint8_t     uc_mark;
-    uint8_t     uc_size;
-    uint8_t     uc_act;
+    uint8_t      uc_mark;
+    uint8_t      uc_act;
+    uint16_t     us_size;
 } T_CRSP_HDR;
 #pragma pack(pop)
 
-#define CMD_RESP_HEADER_SIZE    3
+#define CMD_RESP_HEADER_SIZE    sizeof(T_CRSP_HDR)
 #define DBG_LOG_HEADER_SIZE     2
 
 T_DEV_RX_STREAM gt_stream_dbgl = {
@@ -122,7 +123,7 @@ int gn_dev_index = 0;
 int gn_dev_resp_timeout;
 
 #define RESP_STR_LEN 1024
-WCHAR gca_dev_resp_str[RESP_STR_LEN];
+WCHAR gwca_dev_resp_str[RESP_STR_LEN];
 
 typedef struct T_DEV_RX_tag {
     BYTE                uca_dev_rx_buff[1024];
@@ -178,7 +179,7 @@ int io_ui_init (void)
     pb_msg_buff = add_tlv_dword(pb_msg_buff, UI_IO_TLV_TYPE_UI_CMD, (DWORD)IO_UI_UI_CMD_START);
     pb_msg_buff = add_tlv_str(pb_msg_buff, UI_IO_TLV_TYPE_CMD_INIT_STR, gca_ui_init_str);
 
-    wprintf(L"UI INIT <-- IO : Init start\n");
+    wprintf(L"UI INIT <-- IO: Init start\n");
 
     t_msg_len = terminate_tlv_list(pb_msg_buff);
     io_pipe_tx_byte(gba_io_pipe_tx_buff, t_msg_len);
@@ -203,7 +204,7 @@ int io_ui_init_cont (void)
     if (!pt_curr_cmd->pc_name)
     {   // All commands processed. Send an INIT END command to UI
         pb_msg_buff = add_tlv_dword(pb_msg_buff, UI_IO_TLV_TYPE_UI_CMD, (DWORD)IO_UI_UI_CMD_END);
-        wprintf(L"UI INIT <-- IO : Init end\n");
+        wprintf(L"UI INIT <-- IO: Init end\n");
     }
     else 
     {   // Some commands still there. Continue sending...
@@ -432,7 +433,7 @@ int io_pipe_rx_proc (void)
     // Check message type 
     if (gt_flags.io_ui == FL_CLR && gt_flags.io_conn == FL_SET)
     { 
-        wprintf(L"UI INIT --> IO : %s\n", gca_io_pipe_rx_buff);
+        wprintf(L"UI --> IO: %s\n", gca_io_pipe_rx_buff);
 
         if (_wcsicmp(gca_io_pipe_rx_buff, L"INIT") == 0)
         {
@@ -717,7 +718,7 @@ int dev_open_uart (int n_dev_indx, FT_HANDLE *ph_device)
     // Divisor = (N + 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875)
     // Divisor = 24 ==> Baud 125000 
 
-    ftDCB.BaudRate = 76800;
+    ftDCB.BaudRate = 115200;
     ftDCB.fBinary = TRUE;                       /* Binary Mode (skip EOF check)    */
     ftDCB.fParity = FALSE;                      /* Enable parity checking          */
     ftDCB.fOutxCtsFlow = FALSE;                 /* CTS handshaking on output       */
@@ -971,7 +972,7 @@ int dev_rx_init(DWORD dw_dev_resp_req_len, BYTE *pb_dev_rx_buff)
     int n_rc, n_gle;
 
     static DWORD dw_req_len_last;
-    static BYTE  *pb_buff_last;
+    static BYTE  *pb_buff_last;         // Pointer to the buffer was in use last time
 
     if (NULL == pb_dev_rx_buff)
     {
@@ -1056,6 +1057,11 @@ int dev_rx (DWORD dw_len, BYTE *pb_data)
 
 int dev_rx_proc (DWORD dw_bytes_rcv)
 {
+    /*
+     *  Att: Do not reuse the code below. Its ugly attempt to 
+     *       adopt multi streaming protocol to datagramm connection
+     */
+
     BYTE    *pb_stream_buff;
     DWORD   dw_stream_btr, dw_stream_len;
     T_DEV_RX_STREAM *pt_stream;
@@ -1298,10 +1304,6 @@ void dev_rx_stream_handler_crsp (void)
     pt_stream = &gt_stream_crsp;
     pt_crsp_hdr = (T_CRSP_HDR *)pt_stream->ca_buff;
 
-    t_resp.b_cmd = pt_crsp_hdr->uc_act;
-    t_resp.b_len = pt_crsp_hdr->uc_size - sizeof(T_CRSP_HDR);
-    t_resp.pb_data = &pt_stream->ca_buff[0] + sizeof(T_CRSP_HDR);
-
     if (pt_crsp_hdr->uc_mark != DBG_BUFF_MARK_RSP)
     {
         while (1);
@@ -1311,36 +1313,33 @@ void dev_rx_stream_handler_crsp (void)
     if (pt_stream->dw_wr_idx == CMD_RESP_HEADER_SIZE)
     {
         // Check is payload present
-        if (pt_crsp_hdr->uc_size != CMD_RESP_HEADER_SIZE)
+        if (pt_crsp_hdr->us_size != CMD_RESP_HEADER_SIZE)
         {
             // Request response reminder
-            pt_stream->dw_btr = pt_crsp_hdr->uc_size;
+            pt_stream->dw_btr = sizeof(T_CRSP_HDR) + pt_crsp_hdr->us_size;
             return;
         }
     }
     
-    // All requested data received 
-    if (pt_stream->dw_wr_idx != pt_crsp_hdr->uc_size)
-    {
-        // something wrong
-        while (1);
-    }
+    t_resp.b_cmd = pt_crsp_hdr->uc_act;
+    t_resp.s_len = pt_crsp_hdr->us_size;
+    t_resp.pb_data = &pt_stream->ca_buff[0] + CMD_RESP_HEADER_SIZE;
+
+    // Everething is OK here proceed with printout
+    n_rc = dev_response_processing(&t_resp, gwca_dev_resp_str, RESP_STR_LEN);
 
     // Init new command read from stream
     pt_stream->dw_btr = CMD_RESP_HEADER_SIZE;
     pt_stream->dw_wr_idx = 0;
 
-    // Everething is OK here proceed with printout
-    n_rc = dev_response_processing(&t_resp, gca_dev_resp_str, RESP_STR_LEN);
-
     // If response composed, then send response 
     // message to UI in human readable format 
-    if (gca_dev_resp_str[0] != L'\0')
+    if (gwca_dev_resp_str[0] != L'\0')
     {
         pb_msg_buff = &gba_io_pipe_tx_buff[0];
         pb_msg_buff = add_tlv_str( pb_msg_buff, 
                                    UI_IO_TLV_TYPE_CMD_RSP, 
-                                   gca_dev_resp_str);
+                                   gwca_dev_resp_str);
 
         t_msg_len = terminate_tlv_list(pb_msg_buff);
         io_pipe_tx_byte(gba_io_pipe_tx_buff, t_msg_len);
@@ -1359,6 +1358,7 @@ void dev_tx (DWORD dw_bytes_to_write, BYTE *pc_cmd, const WCHAR *pc_cmd_name)
 
     if (gt_flags.dev_conn != FL_SET) return;
 
+#if 0
     { // print out raw command
         DWORD i;
         wprintf(L"\n--------------------------------- %s : %0X", pc_cmd_name, pc_cmd[0]);
@@ -1369,6 +1369,7 @@ void dev_tx (DWORD dw_bytes_to_write, BYTE *pc_cmd, const WCHAR *pc_cmd_name)
         }
         wprintf(L"\n");
     }
+#endif
 
     n_rc = FT_W32_WriteFile(
         gh_dev,
@@ -1510,7 +1511,7 @@ int main_loop_wait (void)
             gt_dev_rx.uca_dev_rx_buff[0] |= gdw_uart_simulated_bytes & ((1 << 6) - 1);
 
             gt_stream_crsp.dw_wr_idx = 0;
-            !!! debug this !!!
+//            !!! debug this !!!
             dev_rx_proc(gdw_dev_bytes_rcv);
 
             gdw_dev_bytes_rcv = gdw_uart_simulated_bytes;
@@ -1554,7 +1555,7 @@ int main_loop_wait (void)
             else
             {
                 // Timeout. Just repeat 
-                wprintf(L"Dev rx timeout\n");
+                // wprintf(L"Dev rx timeout\n");
                 dev_rx_init(0, NULL);
             }
         }

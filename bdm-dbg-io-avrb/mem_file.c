@@ -19,7 +19,7 @@ int json_object_object_get_int(const struct json_object *jso, const char *key, i
             }
         }
         else {
-            *val = json_object_get_int(val);
+            *val = json_object_get_int(jso_val);
         }
     } else {
         return -1;
@@ -45,7 +45,6 @@ T_MEM_FILE *memf_rsp_init(WCHAR *file_name_W)
     memf->obj = json_object_new_object();
 
     memf->mem_blocks = json_object_new_array();
-    // json_object_object_add(memf->obj, "mem_blocks", memf->mem_blocks);
 
     memf->mem_blocks_size = 0;
     memf->mem_blocks_it = 0;
@@ -75,12 +74,6 @@ T_MEM_FILE *memf_cmd_init(WCHAR *file_name_W)
 
     struct json_object*  fobj = json_object_from_file(file_name);
     
-    json_object_object_foreach(fobj, fkey2, fval2)
-    {
-        int a = json_object_get_type(fval2);
-        wprintf(L"%d - %hs\n", a, fkey2);
-    }
-
     if (!json_object_object_get_ex(fobj, "mem_blocks", &memf->mem_blocks)) {
         wprintf(L"Can't find memory blocks");
         return NULL;
@@ -151,15 +144,26 @@ int memf_cmd_get_next(T_MEM_FILE *memf, T_MEM_ENTRY *mem_entry)
 
 void memf_cmd_close(T_MEM_FILE *memf)
 {
-    json_tokener_free(memf->json_tokener);
+    if (memf->json_tokener) {
+        json_tokener_free(memf->json_tokener);
+        memf->json_tokener = NULL;
+    }
     //json_tokener_free(memf->obj);
     free(memf);
 }
 
 void memf_rsp_close(T_MEM_FILE *memf)
 {
-//    extern int json_object_to_file(const char *filename, struct json_object *obj);
-    //json_tokener_free(memf->obj);
+    if (memf_rsp->file_name == NULL) {
+        memf_rsp->file_name = "default_frd_out.json";
+    }
+
+    json_object_object_add(memf_rsp->obj, "mem_blocks", memf_rsp->mem_blocks);
+
+    json_object_to_file_ext(memf_rsp->file_name, memf_rsp->obj, JSON_C_TO_STRING_PRETTY);
+
+    json_object_put(memf_rsp->obj);
+
     free(memf);
 }
 

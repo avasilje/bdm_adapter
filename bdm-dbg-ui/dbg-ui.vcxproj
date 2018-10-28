@@ -51,7 +51,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(TargetDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\MyWorks\ColdFire\sw\bdm_adapter\bdm-dbg-ui\Debug;$(TargetDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>cmd_line_wc.lib;bdm-dbg-cmd-lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -71,8 +71,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dbg-ui.cpp" />
-    <ClCompile Include="dbg-ui_inp.cpp" />
+    <ClCompile Include="dbg-ui.c" />
+    <ClCompile Include="dbg-ui_inp.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dbg-ui.h" />

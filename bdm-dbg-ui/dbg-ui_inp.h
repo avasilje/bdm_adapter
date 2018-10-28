@@ -36,7 +36,7 @@ typedef struct cmd_proc_tag{
 #define SEND_COMMAND        5
 #define SHOW_OPTIONS_HELP   8
 
-void show_options_help(T_UI_CMD *pt_cmd);
+//void show_options_help(T_UI_CMD *pt_cmd);
 
 void show_cmd_help(T_UI_CMD *pt_cmd_lib_arg);
 void show_options_help(void);

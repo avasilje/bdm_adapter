@@ -148,7 +148,7 @@ int update_cmd_int(WCHAR *pc_cmd_arg, T_UI_CMD_FIELD *pt_fields, int n_update){
                                 break;
                             }
                         }
-                        pt_curr_field->pt_raw_buff->b_len = 
+                        pt_curr_field->pt_raw_buff->dw_len = 
                             (p_raw_dst - pt_curr_field->pt_raw_buff->pb_buff);
                         break;
                     }
@@ -180,7 +180,7 @@ int update_cmd_int(WCHAR *pc_cmd_arg, T_UI_CMD_FIELD *pt_fields, int n_update){
                                 break;
                             }
                         }
-                        pt_curr_field->pt_raw_buff->b_len = 
+                        pt_curr_field->pt_raw_buff->dw_len = 
                             (p_raw_dst - pt_curr_field->pt_raw_buff->pb_buff);
                         break;
                     }
@@ -212,7 +212,8 @@ int update_cmd_int(WCHAR *pc_cmd_arg, T_UI_CMD_FIELD *pt_fields, int n_update){
     return n_rc;
 }
 
-T_UI_CMD* decomposite_cp_cmd(WCHAR *pc_cmd_arg, T_UI_CMD *pt_cmd, int n_update){
+T_UI_CMD* decomposite_cp_cmd (WCHAR *pc_cmd_arg, T_UI_CMD *pt_cmd, int n_update)
+{
 
 #define MAX_CMD_ARG_LEN 1024
 
@@ -252,7 +253,7 @@ T_UI_CMD* decomposite_cp_cmd(WCHAR *pc_cmd_arg, T_UI_CMD *pt_cmd, int n_update){
 
 BYTE *add_tlv_raw(BYTE *pb_msg_buff, E_UI_IO_TLV_TYPE e_type, T_RAW_BUF *pt_raw_buff)
 {
-    size_t b_len = pt_raw_buff->b_len;
+    size_t b_len = pt_raw_buff->dw_len;
 
     *pb_msg_buff++ = (BYTE)e_type;          // type
     *pb_msg_buff++ = (BYTE)b_len;           // len in bytes
@@ -353,11 +354,11 @@ BYTE* get_tlv_v_raw_n(BYTE *pb_buff, T_UI_IO_TLV *t_tlv, int n_len)
         wprintf(L"Att:Something wrong @ %d\n", __LINE__);
         return NULL;
     }
-    t_tlv->val_raw->b_len = *pb_buff;
-    pb_buff += sizeof(t_tlv->val_raw->b_len);
+    t_tlv->val_raw->dw_len = *pb_buff;
+    pb_buff += sizeof(t_tlv->val_raw->dw_len);
 
     // Skip data copy from pb_buff to TLV as useless
-    pb_buff += t_tlv->val_raw->b_len;
+    pb_buff += t_tlv->val_raw->dw_len;
 
     return pb_buff;
 }

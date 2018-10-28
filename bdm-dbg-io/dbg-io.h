@@ -3,10 +3,10 @@
 
 void dev_tx (DWORD dw_bytes_to_write, BYTE *pc_cmd, const WCHAR *pc_cmd_name);
 
-typedef struct T_DEV_RSP_tag
+typedef struct dev_rsp_s
 {
     BYTE b_cmd;
-    BYTE b_len;
+    WORD s_len;
     BYTE *pb_data;
 } T_DEV_RSP;
 

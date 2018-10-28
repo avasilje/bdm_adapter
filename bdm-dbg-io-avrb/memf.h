@@ -1,5 +1,39 @@
 #pragma once
 
+/*! \brief Toggles the endianism of \a u16 (by swapping its bytes).
+ *
+ * \param u16 WORD of which to toggle the endianism.
+ *
+ * \return Value resulting from \a u16 with toggled endianism.
+ *
+ * \note More optimized if only used with values known at compile time.
+ */
+#define Swap16(u16) ((WORD)(((WORD)(u16) >> 8) |\
+                           ((WORD)(u16) << 8)))
+
+/*! \brief Toggles the endianism of \a u32 (by swapping its bytes).
+ *
+ * \param u32 DWORD of which to toggle the endianism.
+ *
+ * \return Value resulting from \a u32 with toggled endianism.
+ *
+ * \note More optimized if only used with values known at compile time.
+ */
+#define Swap32(u32) ((DWORD)(((DWORD)Swap16((DWORD)(u32) >> 16)) |\
+                           ((DWORD)Swap16((DWORD)(u32)) << 16)))
+
+/*! \brief Toggles the endianism of \a u64 (by swapping its bytes).
+ *
+ * \param u64 U64 of which to toggle the endianism.
+ *
+ * \return Value resulting from \a u64 with toggled endianism.
+ *
+ * \note More optimized if only used with values known at compile time.
+ */
+//#define Swap64(u64) ((U64)(((U64)Swap32((U64)(u64) >> 32)) |\
+//                           ((U64)Swap32((U64)(u64)) << 32)))
+
+
 typedef struct {
     int is_valid;
     const CHAR *name;

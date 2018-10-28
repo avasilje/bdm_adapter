@@ -2,17 +2,18 @@
   "mem_blocks": [
     {
       "name": "stat0",
-      "addr": "0x12345",
-      "size": "0x123456",
-      "width": 2,
+      "addr": "0x2000004C",
+      "size": "0x70",
+      "width": 4,
       "format": "d"
     },
     {
-      "name": "stat1",
-      "addr": "0x12345",
-      "size": "0x123456",
-      "width": 1,
-      "format": "X"
+      "name": "stat0",
+      "addr": "0x20000096",
+      "size": "0x20",
+      "width": 4,
+      "format": "d"
     }
+
   ]
 }

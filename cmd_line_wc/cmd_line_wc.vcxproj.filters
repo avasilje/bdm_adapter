@@ -11,10 +11,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cmd_line_off.cpp">
+    <ClCompile Include="cmd_line_off.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cmd_line_wc.cpp">
+    <ClCompile Include="cmd_line_wc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
