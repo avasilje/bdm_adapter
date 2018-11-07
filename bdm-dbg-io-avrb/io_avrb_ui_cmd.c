@@ -117,8 +117,8 @@ T_UI_CMD gta_io_ui_cmd[] = {
         { L"RD",       (T_UI_CMD_FIELD*)&gt_cmd_bdm_read,    (void*)cmd_io_bdm_read  },
         { L"WR8",      (T_UI_CMD_FIELD*)&gt_cmd_bdm_write8,  (void*)cmd_io_bdm_write8  },
         { L"WR16",     (T_UI_CMD_FIELD*)&gt_cmd_bdm_write16, (void*)cmd_io_bdm_write16 },
-        { L"FWR",      (T_UI_CMD_FIELD*)&gt_cmd_bdm_fwrite,  (void*)cmd_io_bdm_fwrite },
-        { L"FRD",      (T_UI_CMD_FIELD*)&gt_cmd_bdm_fread,   (void*)cmd_io_bdm_fread },
+        { L"FWR",      (T_UI_CMD_FIELD*)&gt_cmd_bdm_fwrite,  (void*)cmd_io_bdm_fwrite_region },
+        { L"FRD",      (T_UI_CMD_FIELD*)&gt_cmd_bdm_fread,   (void*)cmd_io_bdm_fread_region },
         { L"LOOPBACK", (T_UI_CMD_FIELD*)&gt_cmd_loopback,  (void*)cmd_io_loopback  },
         { 0, 0 }
 };

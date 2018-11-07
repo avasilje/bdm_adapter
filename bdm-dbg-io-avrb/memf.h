@@ -1,5 +1,7 @@
 #pragma once
 
+#include "json-c/json.h"
+
 /*! \brief Toggles the endianism of \a u16 (by swapping its bytes).
  *
  * \param u16 WORD of which to toggle the endianism.
@@ -43,6 +45,7 @@ typedef struct {
     int   width;
     const CHAR *format;
     BYTE *data;
+    BYTE *prev_data;        // Leak is here
 } T_MEM_ENTRY;
 
 typedef struct {
@@ -53,6 +56,8 @@ typedef struct {
     struct json_object_iterator it;
     struct json_object_iterator itEnd;
     struct json_object* obj;
+
+    struct json_object *mem_region;
 
     struct json_object *mem_blocks;
     int mem_blocks_it;

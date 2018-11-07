@@ -39,7 +39,7 @@ extern struct s_cmd_bdm_read gt_cmd_bdm_read;
 
 //----------------------------------------------------------
 
-#define BDM_WRITE_DATA_LEN 240
+#define BDM_WRITE_DATA_LEN 4096
 struct s_cmd_bdm_write{
     T_UI_CMD_FIELD   addr;
     T_UI_CMD_FIELD   data;

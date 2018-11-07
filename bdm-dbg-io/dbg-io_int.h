@@ -44,7 +44,7 @@ typedef struct t_dev_rx_stream_tag {
     int   n_stream_idx;
     DWORD dw_btr;               // Set by command processor function. Number of bytes requested by proc funct.
     DWORD dw_wr_idx;            // Number of already received bytes.
-    BYTE  ca_buff[1024];
+    BYTE  ca_buff[4096];
     void (*pf_handler)(void);
 } T_DEV_RX_STREAM;
 

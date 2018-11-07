@@ -23,8 +23,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "json-c/json.h"
-
 #include "FTD2XX.H"
 #include "cmd_lib.h"
 #include "dbg-io.h"
@@ -73,7 +71,7 @@ typedef struct T_DBGL_HDR_tag {
 typedef struct T_CRSP_HDR_tag {
     uint8_t      uc_mark;
     uint8_t      uc_act;
-    uint16_t     us_size;
+    uint32_t     ul_size;
 } T_CRSP_HDR;
 #pragma pack(pop)
 
@@ -105,8 +103,8 @@ OVERLAPPED gt_io_pipe_conn_overlap = { 0 };      // General pipe related event
 OVERLAPPED gt_io_pipe_rx_overlap = { 0 };        // Pipe RX related event
 OVERLAPPED gt_io_pipe_tx_overlap = { 0 };        // Pipe TX related event
 
-#define IO_PIPE_RX_BUFF_LEN 1024
-#define IO_PIPE_TX_BUFF_LEN 1024
+#define IO_PIPE_RX_BUFF_LEN 4096
+#define IO_PIPE_TX_BUFF_LEN 4096
 
 WCHAR gca_io_pipe_rx_buff[IO_PIPE_RX_BUFF_LEN];
 BYTE  gba_io_pipe_tx_buff[IO_PIPE_TX_BUFF_LEN];
@@ -122,11 +120,11 @@ DWORD gdw_dev_bytes_rcv;
 int gn_dev_index = 0;
 int gn_dev_resp_timeout;
 
-#define RESP_STR_LEN 1024
+#define RESP_STR_LEN 65536
 WCHAR gwca_dev_resp_str[RESP_STR_LEN];
 
 typedef struct T_DEV_RX_tag {
-    BYTE                uca_dev_rx_buff[1024];
+    BYTE                uca_dev_rx_buff[4096];
     T_DEV_RX_STREAM     *pt_curr_stream;
     DWORD               dw_stream_len;          // Number of bytes expected in stream
 } T_DEV_RX;
@@ -1313,16 +1311,16 @@ void dev_rx_stream_handler_crsp (void)
     if (pt_stream->dw_wr_idx == CMD_RESP_HEADER_SIZE)
     {
         // Check is payload present
-        if (pt_crsp_hdr->us_size != CMD_RESP_HEADER_SIZE)
+        if (pt_crsp_hdr->ul_size != CMD_RESP_HEADER_SIZE)
         {
             // Request response reminder
-            pt_stream->dw_btr = sizeof(T_CRSP_HDR) + pt_crsp_hdr->us_size;
+            pt_stream->dw_btr = sizeof(T_CRSP_HDR) + pt_crsp_hdr->ul_size;
             return;
         }
     }
     
     t_resp.b_cmd = pt_crsp_hdr->uc_act;
-    t_resp.s_len = pt_crsp_hdr->us_size;
+    t_resp.dw_len = pt_crsp_hdr->ul_size;
     t_resp.pb_data = &pt_stream->ca_buff[0] + CMD_RESP_HEADER_SIZE;
 
     // Everething is OK here proceed with printout

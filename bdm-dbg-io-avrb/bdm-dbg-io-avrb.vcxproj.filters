@@ -32,6 +32,12 @@
     <ClCompile Include="io_avrb_ui_cmd.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="crc16.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="region.c">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="io_avrb_ui_cmd.h">
@@ -50,6 +56,9 @@
       <Filter>dbg-io</Filter>
     </ClInclude>
     <ClInclude Include="memf.h">
+      <Filter>Source Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="region.h">
       <Filter>Source Files\utils</Filter>
     </ClInclude>
   </ItemGroup>

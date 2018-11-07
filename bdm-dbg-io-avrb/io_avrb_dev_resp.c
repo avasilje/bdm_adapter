@@ -22,13 +22,16 @@
 #include <stdio.h>
 #include "cmd_lib.h"
 #include "dbg-io.h"
-#include "json-c/json.h"
+
 #include "memf.h"
 
 T_MEM_FILE *memf_rsp;
+void (*mem_read_cb)(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len);
+void (*mem_write_cb)(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len);
 
-void memf_entry_printf (T_MEM_ENTRY *pt_mem_entry, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len) 
+int memf_entry_printf (T_MEM_ENTRY *pt_mem_entry, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len) 
 {
+    int t_max_resp_len_orig = t_max_resp_len;
     int wchars;
     wchars = swprintf(pc_cmd_resp_out, t_max_resp_len, L"%hs (%d)", 
         pt_mem_entry->name,
@@ -90,7 +93,103 @@ void memf_entry_printf (T_MEM_ENTRY *pt_mem_entry, WCHAR *pc_cmd_resp_out, size_
     pc_cmd_resp_out += wchars;
     t_max_resp_len -= wchars;
 
+    return t_max_resp_len_orig - t_max_resp_len;
+}
 
+void rsp_printf(WCHAR **ppc_cmd_resp_out, size_t *pt_max_resp_len, const WCHAR *format, ...)
+{
+
+    va_list  va_args;
+
+    va_start(va_args, format);
+
+    int wchars = vswprintf(*ppc_cmd_resp_out, *pt_max_resp_len, format, va_args); 
+
+    va_end(va_args);
+    
+    if (wchars < 0) {
+        wchars = swprintf(*ppc_cmd_resp_out, *pt_max_resp_len, L"%s", L"..."); 
+        *pt_max_resp_len = 0;
+    } else {
+        *ppc_cmd_resp_out += wchars;
+        *pt_max_resp_len -= wchars;
+    }
+
+}
+
+void memf_entry_printf_sinlge (T_MEM_ENTRY *pt_mem_entry, WCHAR **ppc_cmd_resp_out, size_t *pt_max_resp_len) 
+{
+    rsp_printf(ppc_cmd_resp_out, pt_max_resp_len, L"%-16hs (%d)", 
+        pt_mem_entry->name,
+        pt_mem_entry->size);
+
+    int col_cnt = 0;
+    int cols = 
+        pt_mem_entry->width == 1 ? 16 :
+        pt_mem_entry->width == 2 ?  8 :
+        pt_mem_entry->width == 4 ?  4 : 16;
+    DWORD curr_addr = pt_mem_entry->addr;
+
+    WCHAR *wprint_format1 = L"%d";
+    WCHAR *wprint_format2 = L"%d";
+
+    switch (pt_mem_entry->width) {
+        case 1: wprint_format1 = L"0x%02X"; break;
+        case 2: wprint_format1 = L"0x%04X"; break;
+        case 4: wprint_format1 = L"0x%08X"; break;
+    }
+
+    switch (pt_mem_entry->width) {
+        case 1: wprint_format2 = L" %-4d"; break;
+        case 2: wprint_format2 = L" %-6d"; break;
+        case 4: wprint_format2 = L" %-12d"; break;
+    }
+
+    rsp_printf(ppc_cmd_resp_out, pt_max_resp_len, L"  %08X: ", curr_addr);
+
+    DWORD n;
+    switch (pt_mem_entry->width) {
+        case 1: n = *(BYTE*)pt_mem_entry->data; break;
+        case 2: n = Swap16(*(WORD*)pt_mem_entry->data); break;
+        case 4: n = Swap32(*(DWORD*)pt_mem_entry->data); break;
+    }
+         
+    rsp_printf(ppc_cmd_resp_out, pt_max_resp_len, wprint_format1, n);
+    rsp_printf(ppc_cmd_resp_out, pt_max_resp_len, wprint_format2, n);
+
+    if (pt_mem_entry->prev_data) {
+        DWORD n_prev = Swap32(*(DWORD*)pt_mem_entry->prev_data);
+        if (n != n_prev) {
+            rsp_printf(ppc_cmd_resp_out, pt_max_resp_len, wprint_format2, n_prev);
+            rsp_printf(ppc_cmd_resp_out, pt_max_resp_len, wprint_format2, n-n_prev);
+        }
+    }
+
+    rsp_printf(ppc_cmd_resp_out, pt_max_resp_len, L"\n");
+
+    return;
+}
+
+void proceed_mem_write_resp (T_DEV_RSP *pt_dev_rsp, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len)
+{
+    struct rsp_mem_write_s *pt_rsp = (struct rsp_mem_write_s *)pt_dev_rsp->pb_data;
+
+    if (mem_write_cb) {
+        mem_write_cb((BYTE*)pt_rsp, sizeof(*pt_rsp), pc_cmd_resp_out, t_max_resp_len);
+    }
+    return;
+ }
+
+void proceed_break_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len) {
+    wprintf(L"Dummy @%d", __LINE__);
+}
+
+void proceed_go_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len) {
+    wprintf(L"Dummy @%d", __LINE__);
+}
+
+void proceed_reset_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len) {
+    wprintf(L"Dummy @%d", __LINE__);                 
 }
 
 void proceed_mem_read_resp (T_DEV_RSP *pt_dev_rsp, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len)
@@ -98,13 +197,19 @@ void proceed_mem_read_resp (T_DEV_RSP *pt_dev_rsp, WCHAR *pc_cmd_resp_out, size_
     char tmp_str[64];
 
 #pragma pack(push, 1)
-    struct t_rsp_read {
+    struct rsp_read_s {
         DWORD addr;
         DWORD len;
         BYTE data[0];
-    } *pt_rsp  = (struct t_rsp_read *)pt_dev_rsp->pb_data;
+    } *pt_rsp  = (struct rsp_read_s *)pt_dev_rsp->pb_data;
 #pragma pack(pop)
 
+    if (mem_read_cb) {
+        mem_read_cb(pt_rsp->data, pt_rsp->len, pc_cmd_resp_out, t_max_resp_len);
+    }
+    return;
+
+    /*  TODO: Move code below to the call back */
     T_MEM_ENTRY *pt_mem_entry;
 
     if (memf_rsp == NULL) {
@@ -178,10 +283,6 @@ void proceed_mem_read_resp (T_DEV_RSP *pt_dev_rsp, WCHAR *pc_cmd_resp_out, size_
 
     pt_mem_entry->is_valid = 0;
     
-    // Response processed continue with next block
-    // JSON will be dumped to file after all blocks processed
-    cmd_io_bdm_fread_cont();
-    
 }
 
 
@@ -222,13 +323,22 @@ int dev_response_processing (T_DEV_RSP *pt_resp, WCHAR *pc_cmd_resp_out, size_t 
     case 0x11: // Device signature
         proceed_dev_sign_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len);
         break;
-    case 0x17: // Loopback. Just return input as is in WCHAR format
-        proceed_loopback_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len);
+    case 0x16:  
+        proceed_break_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len);
         break;
-
+    case 0x17:  
+        proceed_go_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len);
+        break;
+    case 0x18:  
+        proceed_reset_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len);
+        break;
+    case 0x21: // Memory write
+        proceed_mem_write_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len);
+        break;
     case 0x22: // Memory read
         proceed_mem_read_resp(pt_resp, pc_cmd_resp_out, t_max_resp_len);
         break;
+
     default:
         wprintf(L"Shit happens");
         while (1);

@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <wchar.h>
 
-#include "json-c/json.h"
 #include "memf.h"
 
 int json_object_object_get_int(const struct json_object *jso, const char *key, int *val) {
@@ -73,19 +72,24 @@ T_MEM_FILE *memf_cmd_init(WCHAR *file_name_W)
     memf->file_name = _strdup(file_name);
 
     struct json_object*  fobj = json_object_from_file(file_name);
-    
+
+    if (!json_object_object_get_ex(fobj, "mem_region", &memf->mem_region)) {
+        wprintf(L"Can't find memory region");
+        return NULL;
+    }
+
     if (!json_object_object_get_ex(fobj, "mem_blocks", &memf->mem_blocks)) {
         wprintf(L"Can't find memory blocks");
-        return NULL;
+        // return NULL;
+    } else {
+        if (json_object_get_type(memf->mem_blocks) != json_type_array) {
+            wprintf(L"Bad format");
+            return NULL;
+        }
+        memf->mem_blocks_size = json_object_array_length(memf->mem_blocks);
+        memf->mem_blocks_it = 0;
     }
 
-    if (json_object_get_type(memf->mem_blocks) != json_type_array) {
-        wprintf(L"Bad format");
-        return NULL;
-    }
-
-    memf->mem_blocks_size = json_object_array_length(memf->mem_blocks);
-    memf->mem_blocks_it = 0;
 
     return memf;
 }
@@ -136,6 +140,19 @@ int memf_cmd_get_next(T_MEM_FILE *memf, T_MEM_ENTRY *mem_entry)
     if (json_object_object_get_ex(j_mem_entry, "format", &val)) {
         mem_entry->format = json_object_get_string(val);
     }
+
+    mem_entry->data = NULL;
+    json_object_object_get_ex(j_mem_entry, "data", &val);
+    if (val) {
+        val = json_object_array_get_idx(val, 0);
+        if (val) {
+            DWORD data_val  = (DWORD)json_object_get_int(val);
+
+            mem_entry->data = malloc(sizeof(DWORD));
+            *(DWORD*)mem_entry->data = Swap32(data_val);
+        }
+    }
+    mem_entry->prev_data = NULL;
     mem_entry->is_valid = 1;
 
     memf->mem_blocks_it++;
@@ -157,8 +174,6 @@ void memf_rsp_close(T_MEM_FILE *memf)
     if (memf_rsp->file_name == NULL) {
         memf_rsp->file_name = "default_frd_out.json";
     }
-
-    json_object_object_add(memf_rsp->obj, "mem_blocks", memf_rsp->mem_blocks);
 
     json_object_to_file_ext(memf_rsp->file_name, memf_rsp->obj, JSON_C_TO_STRING_PRETTY);
 
