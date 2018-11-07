@@ -40,7 +40,14 @@ extern void rsp_printf(WCHAR **ppc_cmd_resp_out, size_t *pt_max_resp_len, const 
 extern int json_object_object_get_int(const struct json_object *jso, const char *key, int *val);
 
 static void region_write_get_data_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len);
+static void region_read_next_region();
+static void region_write_next_region(WCHAR *pc_cmd_resp_out, size_t t_max_resp_len);
 
+
+#define REGION_WR_RESP_STR_LEN 65536        // !! must be <= RESP_STR_LEN 65536
+WCHAR gwca_region_write_resp_str[REGION_WR_RESP_STR_LEN];
+WCHAR *gpwc_region_write_resp_out;
+size_t gt_max_region_write_resp_len;
 
 T_MEM_FILE *memf_cmd;
 
@@ -385,10 +392,11 @@ json_object* mem_entry_to_block(T_MEM_ENTRY *pt_mem_entry)
     /*
         *  {
         *     "name"  : "stat0",
-        *     "addr"  : "0x12345",
-        *     "size"  : "0x123456",
-        *     "width" : 2,
-        *     "format": "d"
+        *     "addr"  : "0x12345",      
+        *     "size"  : "0x123456",     // Optional 4 by default
+        *     "width" : 2,              // Optional 4 by default
+        *     "format": "d"             // Optional 'd' by default
+        *     "wop" : "none"            // Optional write operation "none" by def (enum: "inc", "dec")
         *  },
         */
 
@@ -399,10 +407,22 @@ json_object* mem_entry_to_block(T_MEM_ENTRY *pt_mem_entry)
     sprintf_s(tmp_str, sizeof(tmp_str), "0x%08X", pt_mem_entry->addr);
     json_object_object_add(j_mem_block, "addr"  , json_object_new_string(tmp_str));
 
-    json_object_object_add(j_mem_block, "size"  , json_object_new_int(pt_mem_entry->size));
-    json_object_object_add(j_mem_block, "width" , json_object_new_int(pt_mem_entry->width));
-    json_object_object_add(j_mem_block, "format", json_object_new_string(pt_mem_entry->format));
-    
+    if (pt_mem_entry->size != 4) {
+        json_object_object_add(j_mem_block, "size"  , json_object_new_int(pt_mem_entry->size));
+    }
+
+    if (pt_mem_entry->width != 4) {
+        json_object_object_add(j_mem_block, "width" , json_object_new_int(pt_mem_entry->width));
+    }
+
+    if (0 != _stricmp(pt_mem_entry->format, "d")) {
+        json_object_object_add(j_mem_block, "format", json_object_new_string(pt_mem_entry->format));
+    }
+
+    if (0 != _stricmp(pt_mem_entry->wop, "none")) {
+        json_object_object_add(j_mem_block, "wop", json_object_new_string(pt_mem_entry->wop));
+    }
+
     json_object *j_data_arr = json_object_new_array();
 
     char *j_data_format = "%d";
@@ -448,8 +468,7 @@ void region_write_set_crc_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, siz
     mem_write_cb = NULL;
     struct rsp_mem_write_s *rsp = (struct rsp_mem_write_s *)data;
 
-    memf_cmd_close(memf_cmd);
-    memf_cmd = NULL;
+    region_write_next_region(pc_cmd_resp_out, t_max_resp_len);
 
 }
 
@@ -488,13 +507,24 @@ void region_write_set_data_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, si
             free(pt_mem_entry->prev_data);
             pt_mem_entry->prev_data = NULL;
         }
+
         BYTE *region_data_ptr = region.data + pt_mem_entry->addr - region.addr;
         pt_mem_entry->prev_data = malloc(sizeof(DWORD));
         *(DWORD*) pt_mem_entry->prev_data = *(DWORD*) region_data_ptr;
 
+        // Apply operation
+        if (0 == _stricmp(pt_mem_entry->wop, "none")) {
+            ;    
+        } else  if (0 <= _stricmp(pt_mem_entry->wop, "inc")) {
+            int inc_data = 0;
+            int prev = Swap32(*(DWORD*)region_data_ptr);
+            sscanf_s(pt_mem_entry->wop, "inc%d", &inc_data);
+            *(DWORD*)pt_mem_entry->data = Swap32(inc_data + prev);
+            *(DWORD*)region_data_ptr = Swap32(inc_data + prev);
+        }
         *(DWORD*)region_data_ptr = *(DWORD*)pt_mem_entry->data;
 
-        memf_entry_printf_sinlge(pt_mem_entry, &pc_cmd_resp_out, &t_max_resp_len);
+        memf_entry_printf_sinlge(pt_mem_entry, &gpwc_region_write_resp_out, &gt_max_region_write_resp_len);
 
         //T_MEM_ENTRY mem_region_data = {
         //    .addr = region.addr,
@@ -544,7 +574,7 @@ void region_write_get_data_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, si
 
     const char *crc_is_valid = region_check_crc(&region) ? "Valid" : "Corrupted";
 
-    rsp_printf(&pc_cmd_resp_out, &t_max_resp_len, L"Region: %hs (0x%08X, %d, %hs)\n", 
+    rsp_printf(&gpwc_region_write_resp_out, &gt_max_region_write_resp_len, L"\n        Region: %hs (0x%08X, %d, %hs)\n", 
         region.name,
         region.addr,
         region.size,
@@ -570,6 +600,65 @@ void region_write_get_len_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, siz
     cmd_io_bdm_read_mem_entry(&mem_region_data);
 }
 
+void region_write_next_region(WCHAR *pc_cmd_resp_out, size_t t_max_resp_len)
+{
+
+    struct json_object *j_region =
+        json_object_array_get_idx(memf_cmd->mem_regions, memf_cmd->mem_regions_it);
+
+    memf_cmd->mem_regions_it++;
+
+    if (j_region == NULL) {
+        wprintf(L"No more regions @%d\n", __LINE__);
+
+        if (pc_cmd_resp_out) {
+            wcscpy_s(pc_cmd_resp_out, gt_max_region_write_resp_len, gwca_region_write_resp_str);
+        }
+
+        memf_cmd_close(memf_cmd);
+        memf_cmd = NULL;
+
+        return;
+    }
+
+    if (!json_object_object_get_ex(j_region, "mem_blocks", &memf_cmd->mem_blocks)) {
+        return NULL;
+    } else {
+        if (json_object_get_type(memf_cmd->mem_blocks) != json_type_array) {
+            wprintf(L"Bad format");
+            return;
+        }
+        memf_cmd->mem_blocks_it = 0;
+    }
+
+    /*
+     * Get region name & addr
+     */
+    struct json_object *val;
+    if (json_object_object_get_ex(j_region, "name", &val)) {
+        region.name = json_object_get_string(val);
+    } else {
+        region.name = "";
+    }
+
+    T_MEM_ENTRY mem_region_len = {
+        .addr = 0,  // Filled from json
+        .size = 4
+    };
+
+    if (json_object_object_get_int(j_region, "addr", &region.addr)) {
+        wprintf(L"Element not found @%d", __LINE__);
+        return;
+    }
+    /*
+     * Read region length
+     */
+    mem_region_len.addr = region.addr + 4;
+    
+    mem_read_cb = region_write_get_len_cb;
+    cmd_io_bdm_read_mem_entry(&mem_region_len);
+}
+
 void cmd_io_bdm_fwrite_region(void)
 {
     if (memf_cmd != NULL) {
@@ -584,33 +673,14 @@ void cmd_io_bdm_fwrite_region(void)
         memf_rsp = NULL;
     }
 
-    /*
-     * Get region name & addr
-     */
-    struct json_object *val;
-    if (json_object_object_get_ex(memf_cmd->mem_region, "name", &val)) {
-        region.name = json_object_get_string(val);
-    } else {
-        region.name = "";
-    }
+    gpwc_region_write_resp_out = gwca_region_write_resp_str;
+    gt_max_region_write_resp_len = REGION_WR_RESP_STR_LEN;
 
-    T_MEM_ENTRY mem_region_len = {
-        .addr = 0,  // Filled from json
-        .size = 4
-    };
+    rsp_printf(&gpwc_region_write_resp_out, &gt_max_region_write_resp_len, L"\n\n    File: %s \n",
+        gt_cmd_bdm_fread.fin.pc_str); 
 
-    if (json_object_object_get_int(memf_cmd->mem_region, "addr", &region.addr)) {
-        wprintf(L"Element not found @%d", __LINE__);
-        return;
-    }
+    region_write_next_region(NULL, 0);
 
-    /*
-     * Read region length
-     */
-    mem_region_len.addr = region.addr + 4;
-    
-    mem_read_cb = region_write_get_len_cb;
-    cmd_io_bdm_read_mem_entry(&mem_region_len);
     return;
 }
 
@@ -694,27 +764,22 @@ void region_read_get_data_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, siz
      *  Add region JSON to response 
      */ 
 
+    // Compose region object
     struct json_object*  j_region = json_object_new_object();
     json_object_object_add(j_region, "name"  , json_object_new_string(region.name));
-
     sprintf_s(tmp_str, sizeof(tmp_str), "0x%08X", region.addr);
     json_object_object_add(j_region, "addr"  , json_object_new_string(tmp_str));
-    json_object_object_add(j_region, "size", json_object_new_int(region.size));
-    
+    //json_object_object_add(j_region, "size", json_object_new_int(region.size));
     json_object_object_add(j_region, "valid"  , json_object_new_string(crc_is_valid));
 
-    json_object_object_add(memf_rsp->obj, "mem_region", j_region);
+    // Add data to region object
+    json_object_object_add(j_region, "mem_blocks", memf_rsp->mem_blocks);
+    //memf_rsp->mem_blocks = NULL;
 
-    json_object_object_add(memf_rsp->obj, "mem_blocks", memf_rsp->mem_blocks);
+    // Add region to root's regions array
+    json_object_array_add(memf_rsp->mem_regions, j_region);
 
-    if (err) {
-        memf_cmd_close(memf_cmd);
-        memf_cmd = NULL;
-
-        memf_rsp_close(memf_rsp);
-        memf_rsp = NULL;
-    }
-
+    region_read_next_region();
 }
 
 void region_read_get_len_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, size_t t_max_resp_len)
@@ -732,6 +797,70 @@ void region_read_get_len_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, size
     cmd_io_bdm_read_mem_entry(&mem_region_data);
 }
 
+static void region_read_next_region()
+{
+    struct json_object *j_region =
+        json_object_array_get_idx(memf_cmd->mem_regions, memf_cmd->mem_regions_it);
+
+    memf_cmd->mem_regions_it++;
+
+    if (j_region == NULL) {
+        wprintf(L"No more regions @%d\n", __LINE__);
+
+        json_object_object_add(memf_rsp->obj, "mem_regions", memf_rsp->mem_regions);
+
+        memf_cmd_close(memf_cmd);
+        memf_cmd = NULL;
+
+        memf_rsp_close(memf_rsp);
+        memf_rsp = NULL;
+
+        return;
+    }
+
+    memf_rsp->mem_blocks = json_object_new_array();
+    memf_rsp->mem_blocks_it = 0;
+
+    if (!json_object_object_get_ex(j_region, "mem_blocks", &memf_cmd->mem_blocks)) {
+        wprintf(L"Can't find memory blocks - mode auto");
+        // return NULL;
+    } else {
+        if (json_object_get_type(memf_cmd->mem_blocks) != json_type_array) {
+            wprintf(L"Bad format");
+            return;
+        }
+        memf_cmd->mem_blocks_it = 0;
+    }
+
+    /*
+     * Get region name & addr
+     */
+    struct json_object *val;
+    if (json_object_object_get_ex(j_region, "name", &val)) {
+        region.name = json_object_get_string(val);
+    } else {
+        region.name = "";
+    }
+
+    T_MEM_ENTRY mem_region_len = {
+        .addr = 0,  // Filled from json
+        .size = 4
+    };
+
+    if (json_object_object_get_int(j_region, "addr", &region.addr)) {
+        wprintf(L"Element not found @%d", __LINE__);
+        return;
+    }
+
+    /*
+     * Read region length
+     */
+    mem_region_len.addr = region.addr + 4;
+    
+    mem_read_cb = region_read_get_len_cb;
+    cmd_io_bdm_read_mem_entry(&mem_region_len);
+}
+
 
 void cmd_io_bdm_fread_region(void)
 {
@@ -747,33 +876,8 @@ void cmd_io_bdm_fread_region(void)
     }
     memf_rsp = memf_rsp_init(gt_cmd_bdm_fread.fout.pc_str);
 
-    /*
-     * Get region name & addr
-     */
-    struct json_object *val;
-    if (json_object_object_get_ex(memf_cmd->mem_region, "name", &val)) {
-        region.name = json_object_get_string(val);
-    } else {
-        region.name = "";
-    }
-
-    T_MEM_ENTRY mem_region_len = {
-        .addr = 0,  // Filled from json
-        .size = 4
-    };
-
-    if (json_object_object_get_int(memf_cmd->mem_region, "addr", &region.addr)) {
-        wprintf(L"Element not found @%d", __LINE__);
-        return;
-    }
-
-    /*
-     * Read region length
-     */
-    mem_region_len.addr = region.addr + 4;
+    region_read_next_region();
     
-    mem_read_cb = region_read_get_len_cb;
-    cmd_io_bdm_read_mem_entry(&mem_region_len);
     return;
 }
 

@@ -44,6 +44,7 @@ typedef struct {
     BYTE  id;
     int   width;
     const CHAR *format;
+    const CHAR *wop;
     BYTE *data;
     BYTE *prev_data;        // Leak is here
 } T_MEM_ENTRY;
@@ -53,15 +54,16 @@ typedef struct {
     CHAR *file_name;
     WCHAR *name;
     json_tokener* json_tokener;
+
+    int mem_regions_it;
+
     struct json_object_iterator it;
-    struct json_object_iterator itEnd;
     struct json_object* obj;
 
-    struct json_object *mem_region;
+    struct json_object *mem_regions;
 
     struct json_object *mem_blocks;
     int mem_blocks_it;
-    int mem_blocks_size;
 
     T_MEM_ENTRY t_entry_template;
 } T_MEM_FILE;

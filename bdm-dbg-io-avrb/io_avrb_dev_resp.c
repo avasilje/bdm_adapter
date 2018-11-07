@@ -242,9 +242,17 @@ void proceed_mem_read_resp (T_DEV_RSP *pt_dev_rsp, WCHAR *pc_cmd_resp_out, size_
     sprintf_s(tmp_str, sizeof(tmp_str), "0x%08X", pt_mem_entry->addr);
     json_object_object_add(j_mem_block, "addr"  , json_object_new_string(tmp_str));  // Q: Get it from response or merge with existing?
 
-    json_object_object_add(j_mem_block, "size"  , json_object_new_int(pt_mem_entry->size));
-    json_object_object_add(j_mem_block, "width" , json_object_new_int(pt_mem_entry->width));
-    json_object_object_add(j_mem_block, "format", json_object_new_string(pt_mem_entry->format));
+    if (pt_mem_entry->size != 4) {
+        json_object_object_add(j_mem_block, "size"  , json_object_new_int(pt_mem_entry->size));
+    }
+
+    if (pt_mem_entry->width != 4) {
+        json_object_object_add(j_mem_block, "width" , json_object_new_int(pt_mem_entry->width));
+    }
+
+    if (0 != _stricmp(pt_mem_entry->format, "d")) {
+        json_object_object_add(j_mem_block, "format", json_object_new_string(pt_mem_entry->format));
+    }
     
     json_object *j_data_arr = json_object_new_array();
 

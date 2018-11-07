@@ -43,10 +43,8 @@ T_MEM_FILE *memf_rsp_init(WCHAR *file_name_W)
 
     memf->obj = json_object_new_object();
 
-    memf->mem_blocks = json_object_new_array();
-
-    memf->mem_blocks_size = 0;
-    memf->mem_blocks_it = 0;
+    memf->mem_regions = json_object_new_array();
+    memf->mem_regions_it = 0;
 
     return memf;
 }
@@ -73,23 +71,16 @@ T_MEM_FILE *memf_cmd_init(WCHAR *file_name_W)
 
     struct json_object*  fobj = json_object_from_file(file_name);
 
-    if (!json_object_object_get_ex(fobj, "mem_region", &memf->mem_region)) {
+    if (!json_object_object_get_ex(fobj, "mem_regions", &memf->mem_regions)) {
         wprintf(L"Can't find memory region");
         return NULL;
-    }
-
-    if (!json_object_object_get_ex(fobj, "mem_blocks", &memf->mem_blocks)) {
-        wprintf(L"Can't find memory blocks");
-        // return NULL;
     } else {
-        if (json_object_get_type(memf->mem_blocks) != json_type_array) {
+        if (json_object_get_type(memf->mem_regions) != json_type_array) {
             wprintf(L"Bad format");
             return NULL;
         }
-        memf->mem_blocks_size = json_object_array_length(memf->mem_blocks);
-        memf->mem_blocks_it = 0;
+        memf->mem_regions_it = 0;
     }
-
 
     return memf;
 }
@@ -102,13 +93,12 @@ int memf_cmd_get_next(T_MEM_FILE *memf, T_MEM_ENTRY *mem_entry)
 
     mem_entry->is_valid = 0;
 
-    if (memf->mem_blocks_it >= memf->mem_blocks_size) {
+    struct json_object *j_mem_entry = json_object_array_get_idx(memf->mem_blocks, memf->mem_blocks_it);
+
+    if (j_mem_entry == NULL) {
         // Not an error 
         return 0;
     }
-
-    struct json_object *j_mem_entry = json_object_array_get_idx(memf->mem_blocks, memf->mem_blocks_it);
-
     json_bool rc = 1;
 
     // Mandatory fields
@@ -126,14 +116,23 @@ int memf_cmd_get_next(T_MEM_FILE *memf, T_MEM_ENTRY *mem_entry)
         return -1;
     }
 
-    if (json_object_object_get_int(j_mem_entry, "size", &mem_entry->size)) {
-        wprintf(L"Element not found @%d", __LINE__);
-        return -1;
-    }
 
     // Optional fields
+
+    mem_entry->size = 4;
+    if (json_object_object_get_int(j_mem_entry, "size", &mem_entry->size)) {
+        //wprintf(L"Element not found @%d", __LINE__);
+        //return -1;
+    }
+
+    mem_entry->width = 4;
     if (json_object_object_get_ex(j_mem_entry, "width", &val)) {
         mem_entry->width = json_object_get_int(val);
+    }
+
+    mem_entry->wop = "none";
+    if (json_object_object_get_ex(j_mem_entry, "wop", &val)) {
+        mem_entry->wop = json_object_get_string(val);
     }
 
     mem_entry->format = "d";
@@ -178,6 +177,7 @@ void memf_rsp_close(T_MEM_FILE *memf)
     json_object_to_file_ext(memf_rsp->file_name, memf_rsp->obj, JSON_C_TO_STRING_PRETTY);
 
     json_object_put(memf_rsp->obj);
+    memf_rsp->obj = NULL;
 
     free(memf);
 }
