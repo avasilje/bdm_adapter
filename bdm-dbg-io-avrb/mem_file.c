@@ -85,6 +85,17 @@ T_MEM_FILE *memf_cmd_init(WCHAR *file_name_W)
     return memf;
 }
 
+void mem_entry_set_default(T_MEM_ENTRY *mem_entry)
+{
+    mem_entry->name = "";
+    mem_entry->size = 4;
+    mem_entry->width = 4;
+    mem_entry->wop = "none";
+    mem_entry->format = "d";
+    mem_entry->data = NULL;
+    mem_entry->prev_data = NULL;
+}
+
 int memf_cmd_get_next(T_MEM_FILE *memf, T_MEM_ENTRY *mem_entry)
 {
     if (!mem_entry) {
@@ -104,43 +115,35 @@ int memf_cmd_get_next(T_MEM_FILE *memf, T_MEM_ENTRY *mem_entry)
     // Mandatory fields
     struct json_object *val;
 
+    mem_entry_set_default(mem_entry);
+
     if (json_object_object_get_ex(j_mem_entry, "name", &val)) {
         mem_entry->name = json_object_get_string(val);
-    } else {
-        mem_entry->name = "";
     }
-
     
     if (json_object_object_get_int(j_mem_entry, "addr", &mem_entry->addr)) {
         wprintf(L"Element not found @%d", __LINE__);
         return -1;
     }
 
-
     // Optional fields
-
-    mem_entry->size = 4;
     if (json_object_object_get_int(j_mem_entry, "size", &mem_entry->size)) {
         //wprintf(L"Element not found @%d", __LINE__);
         //return -1;
     }
 
-    mem_entry->width = 4;
     if (json_object_object_get_ex(j_mem_entry, "width", &val)) {
         mem_entry->width = json_object_get_int(val);
     }
 
-    mem_entry->wop = "none";
     if (json_object_object_get_ex(j_mem_entry, "wop", &val)) {
         mem_entry->wop = json_object_get_string(val);
     }
 
-    mem_entry->format = "d";
     if (json_object_object_get_ex(j_mem_entry, "format", &val)) {
         mem_entry->format = json_object_get_string(val);
     }
 
-    mem_entry->data = NULL;
     json_object_object_get_ex(j_mem_entry, "data", &val);
     if (val) {
         val = json_object_array_get_idx(val, 0);
@@ -151,7 +154,6 @@ int memf_cmd_get_next(T_MEM_FILE *memf, T_MEM_ENTRY *mem_entry)
             *(DWORD*)mem_entry->data = Swap32(data_val);
         }
     }
-    mem_entry->prev_data = NULL;
     mem_entry->is_valid = 1;
 
     memf->mem_blocks_it++;

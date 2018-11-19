@@ -47,11 +47,11 @@
       <AdditionalIncludeDirectories>.;..;..\libwebsockets\include;..\json-c\build;..\ftdi_d2xx\CDM v2.10.00 WHQL Certified;..\bdm-dbg-cmd-proc;..\bdm-dbg-io;..\bdm-dbg-cmd-lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BrowseInformation>true</BrowseInformation>
       <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions); DEV_FT_TYPE_FIFO</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\libwebsockets\build\lib\Debug;..\json-c\build\Debug;$(TargetDir);..\ftdi_d2xx\CDM v2.10.00 WHQL Certified\i386</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\libwebsockets\build\lib\Debug;C:\MyWorks\bdm_adapter\json-c\build\Debug;$(TargetDir);..\ftdi_d2xx\CDM v2.10.00 WHQL Certified\i386;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>ws2_32.lib;json-c.lib;ftd2xx.lib;bdm-dbg-cmd-lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Bscmake>

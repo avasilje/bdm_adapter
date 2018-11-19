@@ -622,7 +622,7 @@ void region_write_next_region(WCHAR *pc_cmd_resp_out, size_t t_max_resp_len)
     }
 
     if (!json_object_object_get_ex(j_region, "mem_blocks", &memf_cmd->mem_blocks)) {
-        return NULL;
+        return;
     } else {
         if (json_object_get_type(memf_cmd->mem_blocks) != json_type_array) {
             wprintf(L"Bad format");
@@ -710,12 +710,12 @@ void region_read_get_data_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, siz
     // --- Fill mem block entries from region data
     // ------------------------------------------------
     int blocks_auto = 0;
-    DWORD blocks_auto_width = 4; 
-    DWORD blocks_auto_addr = region.addr + blocks_auto_width;
-    size_t blocks_auto_size = region.size - blocks_auto_width; 
+    size_t blocks_auto_size;
 
     if (memf_cmd->mem_blocks == NULL) {
         blocks_auto = 1;
+        blocks_auto_size = region.size - 4; 
+        pt_mem_entry->addr = region.addr + 4;     // Don't include CRC
     }
 
     do {
@@ -724,17 +724,10 @@ void region_read_get_data_cb(BYTE *data, size_t len, WCHAR *pc_cmd_resp_out, siz
             if (blocks_auto_size < 4) {
                 pt_mem_entry->is_valid = 0;
             } else {
-                pt_mem_entry->name = "";
-                pt_mem_entry->addr = blocks_auto_addr;
-                pt_mem_entry->size = blocks_auto_width;
-                pt_mem_entry->width = blocks_auto_width;
-                pt_mem_entry->format = "d";
-                pt_mem_entry->data = NULL;
-                
+                mem_entry_set_default(pt_mem_entry);
+                pt_mem_entry->addr += pt_mem_entry->size;
                 pt_mem_entry->is_valid = 1;
-
-                blocks_auto_size -= blocks_auto_width;
-                blocks_auto_addr += blocks_auto_width;
+                blocks_auto_size -= pt_mem_entry->size;
             }
 
         } else {

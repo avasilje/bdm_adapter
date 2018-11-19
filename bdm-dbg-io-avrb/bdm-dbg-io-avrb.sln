@@ -10,6 +10,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bdm-dbg-io-avrb", "bdm-dbg-
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bdm-dbg-cmd-lib", "..\bdm-dbg-cmd-lib\bdm-dbg-cmd-lib.vcxproj", "{AA9EEA04-AADD-4FE0-964C-6BA6E1D9629C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "json-c", "..\..\..\..\bdm_adapter\json-c\build\json-c.vcxproj", "{14DC803E-DD0A-4492-9371-9D431CECFAED}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -34,6 +36,14 @@ Global
 		{AA9EEA04-AADD-4FE0-964C-6BA6E1D9629C}.Release|Win32.Build.0 = Release|Win32
 		{AA9EEA04-AADD-4FE0-964C-6BA6E1D9629C}.RelWithDebInfo|Win32.ActiveCfg = Release|Win32
 		{AA9EEA04-AADD-4FE0-964C-6BA6E1D9629C}.RelWithDebInfo|Win32.Build.0 = Release|Win32
+		{14DC803E-DD0A-4492-9371-9D431CECFAED}.Debug|Win32.ActiveCfg = Debug|Win32
+		{14DC803E-DD0A-4492-9371-9D431CECFAED}.Debug|Win32.Build.0 = Debug|Win32
+		{14DC803E-DD0A-4492-9371-9D431CECFAED}.MinSizeRel|Win32.ActiveCfg = MinSizeRel|Win32
+		{14DC803E-DD0A-4492-9371-9D431CECFAED}.MinSizeRel|Win32.Build.0 = MinSizeRel|Win32
+		{14DC803E-DD0A-4492-9371-9D431CECFAED}.Release|Win32.ActiveCfg = Release|Win32
+		{14DC803E-DD0A-4492-9371-9D431CECFAED}.Release|Win32.Build.0 = Release|Win32
+		{14DC803E-DD0A-4492-9371-9D431CECFAED}.RelWithDebInfo|Win32.ActiveCfg = RelWithDebInfo|Win32
+		{14DC803E-DD0A-4492-9371-9D431CECFAED}.RelWithDebInfo|Win32.Build.0 = RelWithDebInfo|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

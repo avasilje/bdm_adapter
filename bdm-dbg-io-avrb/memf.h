@@ -75,5 +75,6 @@ T_MEM_FILE *memf_rsp_init(WCHAR *file_name);
 int memf_cmd_get_next(T_MEM_FILE *memf, T_MEM_ENTRY *entry);
 void memf_cmd_close(T_MEM_FILE *memf);
 void memf_rsp_close(T_MEM_FILE *memf);
+void mem_entry_set_default(T_MEM_ENTRY *mem_entry);
 
 extern T_MEM_FILE *memf_rsp;
